@@ -1,0 +1,69 @@
+{
+  "S001": {
+    "name": "Ahmed Khan",
+    "grade": 8,
+    "weak_topics": [
+      "fractions",
+      "algebra"
+    ],
+    "completed_lessons": [
+      "intro to math",
+      "geometry basics",
+      "basic algebra"
+    ]
+  },
+  "S002": {
+    "name": "Sara Ali",
+    "grade": 10,
+    "weak_topics": [
+      "organic chemistry"
+    ],
+    "completed_lessons": [
+      "periodic table",
+      "chemical bonding",
+      "acids and bases"
+    ]
+  },
+  "S003": {
+    "name": "John Smith",
+    "grade": 5,
+    "weak_topics": [],
+    "completed_lessons": [
+      "addition",
+      "subtraction",
+      "multiplication"
+    ]
+  },
+  "string": {
+    "name": "string",
+    "grade": 0,
+    "weak_topics": [],
+    "completed_lessons": []
+  },
+  "S005": {
+    "name": "string",
+    "grade": 1,
+    "weak_topics": [],
+    "completed_lessons": []
+  },
+  "S006": {
+    "name": "ab",
+    "grade": 11,
+    "weak_topics": [],
+    "completed_lessons": []
+  },
+  "S007": {
+    "name": "Av",
+    "grade": 11,
+    "weak_topics": [],
+    "completed_lessons": []
+  },
+  "S008": {
+    "name": "v",
+    "grade": 11,
+    "weak_topics": [],
+    "completed_lessons": [
+      "solar"
+    ]
+  }
+}

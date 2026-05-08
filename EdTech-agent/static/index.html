@@ -1,0 +1,991 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>EduBot — AI Tutor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --indigo:#4f46e5; --indigo-dark:#3730a3; --indigo-light:#e0e7ff;
+      --violet:#7c3aed; --emerald:#059669; --amber:#d97706;
+      --rose:#e11d48; --sky:#0ea5e9;
+      --bg:#f8fafc; --card:#ffffff; --text:#0f172a;
+      --muted:#64748b; --border:#e2e8f0;
+      --sidebar-w:240px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden}
+
+    /* ── PAGES ── */
+    .page{display:none;height:100vh;width:100vw;position:fixed;inset:0}
+    .page.show{display:flex}
+
+    /* ══════════════════════════════
+       PAGE 1 — LANDING
+    ══════════════════════════════ */
+    #page-landing{align-items:center;justify-content:center;background:linear-gradient(135deg,#1e1b4b 0%,#312e81 45%,#4c1d95 100%);overflow:hidden}
+    #page-landing::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 50% at 50% 0%,rgba(129,140,248,.15),transparent)}
+    .landing-glass{background:rgba(255,255,255,.07);backdrop-filter:blur(22px);border:1px solid rgba(255,255,255,.13);border-radius:28px;width:min(500px,93vw);overflow:hidden;position:relative;z-index:1;box-shadow:0 32px 80px rgba(0,0,0,.4)}
+    .landing-hero{padding:38px 40px 30px;text-align:center;color:white}
+    .landing-hero .logo{font-size:3.8rem;margin-bottom:10px;display:block;filter:drop-shadow(0 4px 20px rgba(0,0,0,.3))}
+    .landing-hero h1{font-size:1.9rem;font-weight:800;letter-spacing:-.03em;margin-bottom:6px}
+    .landing-hero p{opacity:.6;font-size:0.88rem;line-height:1.5}
+    .ltabs{display:flex;border-top:1px solid rgba(255,255,255,.1);background:rgba(0,0,0,.2)}
+    .ltab{flex:1;padding:13px 10px;border:none;background:none;color:rgba(255,255,255,.45);font-family:inherit;font-size:0.84rem;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s}
+    .ltab.active{color:white;border-bottom-color:#818cf8;background:rgba(255,255,255,.06)}
+    .landing-body{padding:26px 34px 34px;background:white}
+    .ltab-panel{display:none}
+    .ltab-panel.active{display:block}
+
+    /* student picker */
+    .spick{display:flex;align-items:center;gap:14px;padding:13px 15px;border:2px solid var(--border);border-radius:14px;margin-bottom:9px;cursor:pointer;transition:all .18s;user-select:none}
+    .spick:hover{border-color:var(--indigo);background:#f5f3ff;transform:translateX(3px)}
+    .spick.sel{border-color:var(--indigo);background:#ede9fe;box-shadow:0 0 0 4px rgba(79,70,229,.1)}
+    .spick .av{width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,var(--indigo),var(--violet));color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.05rem;flex-shrink:0;box-shadow:0 4px 12px rgba(79,70,229,.3)}
+    .spick .si .sn{font-weight:700;font-size:0.9rem;color:var(--text)}
+    .spick .si .sm{font-size:0.74rem;color:var(--muted);margin-top:2px}
+    .spick .tick{margin-left:auto;color:var(--indigo);font-size:1.4rem;opacity:0;transition:opacity .15s}
+    .spick.sel .tick{opacity:1}
+    .no-students{text-align:center;padding:22px;color:var(--muted);font-size:0.84rem;background:var(--bg);border-radius:12px}
+
+    /* form */
+    .fgroup{margin-bottom:16px}
+    .fgroup label{display:block;font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:7px}
+    .finput{width:100%;border:2px solid var(--border);border-radius:10px;padding:11px 14px;font-size:0.9rem;font-family:inherit;outline:none;transition:border-color .15s;background:white;color:var(--text)}
+    .finput:focus{border-color:var(--indigo);box-shadow:0 0 0 3px rgba(79,70,229,.1)}
+
+    /* buttons */
+    .btn{border:none;border-radius:10px;padding:11px 20px;font-size:0.88rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+    .btn-primary{background:linear-gradient(135deg,var(--indigo),var(--violet));color:white;box-shadow:0 4px 14px rgba(79,70,229,.35)}
+    .btn-primary:hover:not(:disabled){opacity:.9;transform:translateY(-1px);box-shadow:0 6px 20px rgba(79,70,229,.4)}
+    .btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none}
+    .btn-ghost{background:transparent;border:2px solid var(--border);color:var(--muted)}
+    .btn-ghost:hover{border-color:var(--indigo);color:var(--indigo);background:#f5f3ff}
+    .btn-success{background:linear-gradient(135deg,#059669,#047857);color:white;box-shadow:0 4px 12px rgba(5,150,105,.3)}
+    .btn-danger{background:linear-gradient(135deg,#e11d48,#be123c);color:white}
+    .btn-sm{padding:8px 14px;font-size:0.8rem}
+    .btn-block{width:100%;justify-content:center}
+    .spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.35);border-top-color:white;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* alerts */
+    .alert{padding:10px 14px;border-radius:9px;font-size:0.82rem;margin-top:10px;display:none}
+    .alert.show{display:block}
+    .alert-error{background:#fee2e2;color:#991b1b}
+    .alert-success{background:#d1fae5;color:#065f46}
+    .alert-info{background:#dbeafe;color:#1e40af}
+
+    /* ══════════════════════════════
+       PAGE 2 — STUDENT APP
+    ══════════════════════════════ */
+    #page-app{flex-direction:row}
+    .sidebar{width:var(--sidebar-w);background:linear-gradient(180deg,#1e1b4b 0%,#2e2770 100%);color:white;display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
+    .sb-brand{padding:20px 18px 16px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:10px}
+    .sb-brand .ico{font-size:1.7rem}
+    .sb-brand .title{font-size:1rem;font-weight:700}
+    .sb-brand .sub{font-size:0.67rem;opacity:.4;margin-top:1px}
+    .sb-profile{margin:12px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:14px}
+    .sb-profile .pav{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#818cf8,#c084fc);color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.9rem;margin-bottom:10px;box-shadow:0 3px 10px rgba(0,0,0,.3)}
+    .sb-profile .pnm{font-weight:600;font-size:.87rem}
+    .sb-profile .pgr{font-size:.7rem;opacity:.5;margin-top:2px}
+    .sb-profile .pwk{font-size:.7rem;color:#fcd34d;margin-top:6px;line-height:1.4}
+    .sb-nav{flex:1;padding:6px 0;overflow-y:auto}
+    .sb-section{font-size:.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;opacity:.35;padding:14px 18px 5px}
+    .nav-btn{display:flex;align-items:center;gap:10px;width:100%;padding:10px 18px;border:none;background:none;color:rgba(255,255,255,.6);font-family:inherit;font-size:.86rem;font-weight:500;cursor:pointer;transition:all .15s;text-align:left;border-left:3px solid transparent}
+    .nav-btn:hover{background:rgba(255,255,255,.07);color:white}
+    .nav-btn.active{background:rgba(255,255,255,.1);color:white;font-weight:600;border-left-color:#818cf8}
+    .nav-btn .ni{font-size:.95rem;width:18px;text-align:center;flex-shrink:0}
+    .sb-foot{padding:12px}
+    .admin-link{display:flex;align-items:center;gap:8px;width:100%;padding:9px 13px;border:1px solid rgba(255,255,255,.12);border-radius:10px;background:none;color:rgba(255,255,255,.5);font-family:inherit;font-size:.8rem;cursor:pointer;transition:all .15s}
+    .admin-link:hover{background:rgba(255,255,255,.08);color:white;border-color:rgba(255,255,255,.25)}
+
+    /* app main */
+    .app-main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+    .topbar{height:54px;background:white;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 22px;flex-shrink:0}
+    .topbar h2{font-size:.95rem;font-weight:700}
+    .topbar .tb-sub{font-size:.76rem;color:var(--muted);margin-top:2px}
+    .tb-chip{background:var(--indigo-light);color:var(--indigo);font-size:.7rem;font-weight:700;padding:4px 10px;border-radius:99px}
+
+    .screen{display:none;flex:1;overflow:hidden;flex-direction:column}
+    .screen.show{display:flex}
+
+    /* ── CHAT ── */
+    #s-chat{background:#f8fafc}
+    .chat-wrap{flex:1;overflow-y:auto;padding:22px 24px;display:flex;flex-direction:column;gap:14px}
+    .msg{display:flex;gap:10px;max-width:70%}
+    .msg.u{align-self:flex-end;flex-direction:row-reverse}
+    .av-c{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.85rem;flex-shrink:0;margin-top:2px}
+    .msg.b .av-c{background:linear-gradient(135deg,var(--indigo),var(--violet));color:white}
+    .msg.u .av-c{background:linear-gradient(135deg,var(--emerald),#047857);color:white}
+    .bubble{padding:11px 15px;border-radius:18px;font-size:.88rem;line-height:1.6;white-space:pre-wrap;word-break:break-word}
+    .msg.b .bubble{background:white;border:1px solid var(--border);border-top-left-radius:4px;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+    .msg.u .bubble{background:linear-gradient(135deg,var(--indigo),var(--violet));color:white;border-top-right-radius:4px;box-shadow:0 3px 12px rgba(79,70,229,.3)}
+    .typing-dots{display:flex;gap:4px;padding:13px 17px}
+    .typing-dots span{width:8px;height:8px;border-radius:50%;background:var(--muted);animation:bop 1.2s infinite}
+    .typing-dots span:nth-child(2){animation-delay:.2s}
+    .typing-dots span:nth-child(3){animation-delay:.4s}
+    @keyframes bop{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-7px)}}
+    .chat-bar{background:white;border-top:1px solid var(--border);padding:13px 18px;display:flex;gap:10px;align-items:flex-end;flex-shrink:0}
+    .chat-bar textarea{flex:1;border:2px solid var(--border);border-radius:12px;padding:10px 14px;font-size:.9rem;font-family:inherit;resize:none;min-height:44px;max-height:110px;outline:none;transition:border-color .15s;background:white}
+    .chat-bar textarea:focus{border-color:var(--indigo)}
+    .chat-bar .btn{align-self:flex-end}
+
+    /* ── QUIZ ── */
+    #s-quiz{overflow-y:auto;padding:24px;gap:18px;background:#f8fafc;flex-direction:column}
+    .quiz-setup{background:white;border:1px solid var(--border);border-radius:18px;padding:24px}
+    .quiz-setup h3{font-size:.95rem;font-weight:700;margin-bottom:18px;display:flex;align-items:center;gap:8px}
+    .setup-grid{display:grid;grid-template-columns:1fr 170px 170px;gap:12px;align-items:end}
+    @media(max-width:680px){.setup-grid{grid-template-columns:1fr}}
+    .setup-grid .fgroup{margin:0}
+    .quiz-list{display:flex;flex-direction:column;gap:14px}
+    .qcard{background:white;border:2px solid var(--border);border-radius:16px;padding:22px;transition:border-color .2s}
+    .qcard.ok{border-color:#10b981}
+    .qcard.no{border-color:#ef4444}
+    .qcard .qnum{font-size:.7rem;font-weight:700;color:var(--indigo);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+    .qcard .qtext{font-size:.94rem;font-weight:600;margin-bottom:16px;line-height:1.5}
+    .opt-list{display:flex;flex-direction:column;gap:8px}
+    .opt{display:flex;align-items:center;gap:12px;padding:11px 15px;border:2px solid var(--border);border-radius:11px;cursor:pointer;transition:all .15s;font-size:.87rem;user-select:none}
+    .opt:hover{border-color:var(--indigo);background:#f5f3ff}
+    .opt input[type=radio]{accent-color:var(--indigo);width:15px;height:15px;flex-shrink:0;pointer-events:none}
+    .opt.picked{border-color:var(--indigo);background:#ede9fe}
+    .opt.c-ok{border-color:#10b981;background:#d1fae5;color:#065f46;font-weight:600}
+    .opt.c-no{border-color:#ef4444;background:#fee2e2;color:#991b1b}
+    .qfb{margin-top:12px;padding:10px 14px;border-radius:10px;font-size:.82rem;font-weight:500;display:none}
+    .qfb.show{display:block}
+    .qfb.ok{background:#d1fae5;color:#065f46}
+    .qfb.no{background:#fee2e2;color:#991b1b}
+    .score-banner{background:white;border:1px solid var(--border);border-radius:18px;padding:36px;text-align:center}
+    .score-banner .big{font-size:3.4rem;font-weight:800;background:linear-gradient(135deg,var(--indigo),var(--violet));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .score-banner .lbl{color:var(--muted);font-size:.88rem;margin-top:5px}
+    .score-banner .emoj{font-size:2.4rem;margin:10px 0}
+
+    /* ── TOOLS ── */
+    #s-tools{overflow-y:auto;padding:24px;flex-direction:column;gap:20px;background:#f8fafc}
+    .tools-intro h2{font-size:1.15rem;font-weight:700}
+    .tools-intro p{color:var(--muted);font-size:.84rem;margin-top:4px}
+    .tools-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+    @media(max-width:750px){.tools-grid{grid-template-columns:1fr}}
+    .tcard{background:white;border:1px solid var(--border);border-radius:18px;padding:22px;display:flex;flex-direction:column;gap:14px}
+    .tcard-hd{display:flex;align-items:flex-start;gap:12px}
+    .tico{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
+    .tico.purple{background:#ede9fe}
+    .tico.sky{background:#e0f2fe}
+    .tico.amber{background:#fef3c7}
+    .tico.green{background:#d1fae5}
+    .tico.rose{background:#fee2e2}
+    .tcard-hd .meta h4{font-size:.9rem;font-weight:700;margin-bottom:3px}
+    .tcard-hd .meta p{font-size:.76rem;color:var(--muted);line-height:1.4}
+    .tcard-sep{height:1px;background:var(--border)}
+    .tout{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px;font-size:.85rem;line-height:1.65;white-space:pre-wrap;max-height:260px;overflow-y:auto;display:none;color:var(--text)}
+    .tout.show{display:block}
+
+    /* ── PROGRESS ── */
+    #s-progress{overflow-y:auto;padding:24px;flex-direction:column;gap:18px;background:#f8fafc}
+    .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+    @media(max-width:580px){.stats-row{grid-template-columns:1fr 1fr}}
+    .sbox{background:white;border:1px solid var(--border);border-radius:16px;padding:20px;text-align:center}
+    .sbox .val{font-size:2.3rem;font-weight:800;background:linear-gradient(135deg,var(--indigo),var(--violet));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .sbox .lbl{font-size:.76rem;color:var(--muted);margin-top:4px}
+    .pcard{background:white;border:1px solid var(--border);border-radius:16px;padding:20px}
+    .pcard h4{font-size:.88rem;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:7px}
+    .tag{display:inline-block;padding:4px 12px;border-radius:99px;font-size:.74rem;font-weight:600;margin:3px}
+    .tag-red{background:#fee2e2;color:#991b1b}
+    .tag-green{background:#d1fae5;color:#065f46}
+    .no-data{color:var(--muted);font-size:.83rem;font-style:italic}
+    .lesson-row{display:flex;gap:10px;margin-top:14px}
+    .lesson-row input{flex:1;border:2px solid var(--border);border-radius:10px;padding:10px 14px;font-size:.87rem;font-family:inherit;outline:none;transition:border-color .15s}
+    .lesson-row input:focus{border-color:var(--indigo)}
+
+    /* ══════════════════════════════
+       PAGE 3 — ADMIN
+    ══════════════════════════════ */
+    #page-admin{flex-direction:column;background:var(--bg)}
+    .admin-bar{height:56px;background:white;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 26px;flex-shrink:0}
+    .admin-bar .brand{display:flex;align-items:center;gap:10px;font-weight:700}
+    .admin-body{flex:1;overflow-y:auto;padding:26px;max-width:880px;margin:0 auto;width:100%;display:flex;flex-direction:column;gap:22px}
+    .admin-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+    @media(max-width:680px){.admin-grid{grid-template-columns:1fr}}
+    .acard{background:white;border:1px solid var(--border);border-radius:18px;padding:24px}
+    .acard h3{font-size:.93rem;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+    .srow{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--border);border-radius:12px;margin-bottom:8px;transition:background .15s}
+    .srow:hover{background:var(--bg)}
+    .srow .av{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--indigo),var(--violet));color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.88rem;flex-shrink:0}
+    .srow .info .nm{font-weight:600;font-size:.87rem}
+    .srow .info .mt{font-size:.73rem;color:var(--muted);margin-top:1px}
+    .srow .acts{margin-left:auto;display:flex;gap:6px}
+
+    /* ── Curriculum upload ── */
+    .upload-zone{border:2px dashed var(--border);border-radius:14px;padding:32px 22px;text-align:center;cursor:pointer;transition:all .15s;background:var(--bg);margin-bottom:14px}
+    .upload-zone:hover,.upload-zone.drag{border-color:var(--indigo);background:#f5f3ff}
+    .upload-zone .up-icon{font-size:2.2rem;margin-bottom:8px}
+    .upload-zone .up-title{font-weight:600;font-size:.92rem;margin-bottom:4px}
+    .upload-zone .up-sub{font-size:.78rem;color:var(--muted)}
+    .upload-row{display:flex;gap:12px;align-items:flex-end;margin-bottom:8px}
+    @media(max-width:560px){.upload-row{flex-direction:column;align-items:stretch}}
+    .kb-stats{margin-top:18px;padding:10px 14px;background:var(--indigo-light);color:var(--indigo);border-radius:10px;font-size:.8rem;font-weight:600;display:none}
+    .kb-stats.show{display:block}
+    .kb-row{display:flex;align-items:center;gap:12px;padding:11px 14px;border:1px solid var(--border);border-radius:10px;margin-bottom:6px}
+    .kb-row .pdf-ico{width:36px;height:36px;border-radius:9px;background:#fee2e2;color:#dc2626;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
+    .kb-row .info{flex:1;min-width:0}
+    .kb-row .info .nm{font-weight:600;font-size:.86rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .kb-row .info .mt{font-size:.72rem;color:var(--muted);margin-top:1px}
+    .kb-row .del{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:1.1rem;padding:6px;border-radius:6px;transition:all .15s}
+    .kb-row .del:hover{background:#fee2e2;color:var(--rose)}
+
+    /* ── Admin lock + modal ── */
+    .admin-lock{position:absolute;top:18px;right:20px;z-index:20;width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.12);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.18);color:#fff;font-size:1.05rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .18s}
+    .admin-lock:hover{background:rgba(255,255,255,.22);transform:scale(1.08);border-color:rgba(255,255,255,.35)}
+    .modal-bg{position:fixed;inset:0;background:rgba(15,23,42,.65);backdrop-filter:blur(6px);z-index:100;display:none;align-items:center;justify-content:center;padding:20px;animation:fadeIn .18s}
+    .modal-bg.show{display:flex}
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    .modal-card{background:#fff;border-radius:18px;padding:24px;max-width:420px;width:100%;box-shadow:0 25px 60px rgba(0,0,0,.4);animation:popIn .22s}
+    @keyframes popIn{from{transform:scale(.92);opacity:0}to{transform:scale(1);opacity:1}}
+    .modal-head{display:flex;align-items:flex-start;gap:14px;position:relative}
+    .modal-icon{width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
+    .modal-head h3{font-size:1.05rem;margin-bottom:2px;color:var(--text)}
+    .modal-head p{font-size:.78rem;color:var(--muted);margin:0}
+    .modal-x{position:absolute;top:-4px;right:-4px;background:transparent;border:none;color:var(--muted);font-size:1.05rem;cursor:pointer;padding:6px;border-radius:6px}
+    .modal-x:hover{background:#f1f5f9;color:var(--text)}
+  </style>
+</head>
+<body>
+
+<!-- ════════════════════════
+     PAGE 1 — LANDING
+════════════════════════ -->
+<div class="page show" id="page-landing">
+  <!-- Discrete admin lock (top-right) -->
+  <button class="admin-lock" onclick="openAdminModal()" title="Admin access">🔒</button>
+
+  <!-- Admin password modal -->
+  <div class="modal-bg" id="admin-modal" onclick="if(event.target===this)closeAdminModal()">
+    <div class="modal-card">
+      <div class="modal-head">
+        <span class="modal-icon">🔐</span>
+        <div>
+          <h3>Admin Access</h3>
+          <p>Enter password to manage students &amp; curriculum</p>
+        </div>
+        <button class="modal-x" onclick="closeAdminModal()">✕</button>
+      </div>
+      <div class="fgroup" style="margin-top:14px">
+        <label>Password</label>
+        <input class="finput" type="password" id="admin-pw" placeholder="••••••••"
+               onkeydown="if(event.key==='Enter')submitAdminLogin()" autocomplete="off"/>
+      </div>
+      <div class="alert" id="admin-pw-msg"></div>
+      <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="submitAdminLogin()">
+        🔓 Unlock Admin Panel
+      </button>
+      <p style="text-align:center;margin-top:10px;font-size:.72rem;color:var(--muted)">
+        Default password: <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px">admin123</code> · change in <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px">.env</code>
+      </p>
+    </div>
+  </div>
+
+  <div class="landing-glass">
+    <div class="landing-hero">
+      <span class="logo">🎓</span>
+      <h1>EduBot AI Tutor</h1>
+      <p>Personalized AI-powered learning.<br/>Your private tutor, available 24/7.</p>
+    </div>
+    <div class="ltabs">
+      <button class="ltab active" onclick="lswitchTab('existing',this)">👤 &nbsp;I'm a Student</button>
+      <button class="ltab" onclick="lswitchTab('new',this)">✨ &nbsp;New Student</button>
+    </div>
+    <div class="landing-body">
+
+      <!-- Existing student login -->
+      <div class="ltab-panel active" id="lt-existing">
+        <div class="fgroup">
+          <label>Student ID</label>
+          <input class="finput" id="login-id" placeholder="e.g. S001" autocomplete="off"
+                 onkeydown="if(event.key==='Enter')document.getElementById('login-name').focus()"/>
+        </div>
+        <div class="fgroup">
+          <label>Full Name</label>
+          <input class="finput" id="login-name" placeholder="Your registered name" autocomplete="off"
+                 onkeydown="if(event.key==='Enter')loginExisting()"/>
+        </div>
+        <div class="alert" id="login-msg"></div>
+        <button class="btn btn-primary btn-block" style="margin-top:16px" onclick="loginExisting()">
+          🔓 Login &amp; Enter Dashboard
+        </button>
+        <p style="text-align:center;margin-top:12px;font-size:.78rem;color:var(--muted)">
+          New here? Switch to <b>New Student</b> tab above.
+        </p>
+      </div>
+
+      <!-- New student -->
+      <div class="ltab-panel" id="lt-new">
+        <div class="fgroup">
+          <label>Full Name</label>
+          <input class="finput" id="reg-name" placeholder="e.g. Ahmed Khan" autocomplete="off"/>
+        </div>
+        <div class="fgroup">
+          <label>Grade Level</label>
+          <select class="finput" id="reg-grade">
+            <option value="" disabled selected>— Pick your grade —</option>
+            <option value="1">Grade 1 · Primary</option>
+            <option value="2">Grade 2 · Primary</option>
+            <option value="3">Grade 3 · Primary</option>
+            <option value="4">Grade 4 · Primary</option>
+            <option value="5">Grade 5 · Primary</option>
+            <option value="6">Grade 6 · Middle School</option>
+            <option value="7">Grade 7 · Middle School</option>
+            <option value="8">Grade 8 · Middle School</option>
+            <option value="9">Grade 9 · High School</option>
+            <option value="10">Grade 10 · High School</option>
+            <option value="11">Grade 11 · High School</option>
+            <option value="12">Grade 12 · High School</option>
+          </select>
+        </div>
+        <div class="alert" id="reg-msg"></div>
+        <button class="btn btn-primary btn-block" id="reg-btn" onclick="registerStudent()">
+          Create Account &amp; Start Learning 🚀
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════
+     PAGE 2 — STUDENT APP
+════════════════════════ -->
+<div class="page" id="page-app">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sb-brand">
+      <span class="ico">🎓</span>
+      <div><div class="title">EduBot</div><div class="sub">AI Tutor</div></div>
+    </div>
+    <div class="sb-profile">
+      <div class="pav" id="sb-av">?</div>
+      <div class="pnm" id="sb-name">—</div>
+      <div class="pgr" id="sb-grade">Grade —</div>
+      <div class="pwk" id="sb-weak"></div>
+    </div>
+    <nav class="sb-nav">
+      <div class="sb-section">Learning</div>
+      <button class="nav-btn active" onclick="showScreen('chat',this)"><span class="ni">💬</span>Chat with Tutor</button>
+      <button class="nav-btn" onclick="showScreen('quiz',this)"><span class="ni">📝</span>Take a Quiz</button>
+      <div class="sb-section">Tools</div>
+      <button class="nav-btn" onclick="showScreen('tools',this)"><span class="ni">🛠️</span>Learning Tools</button>
+      <div class="sb-section">Profile</div>
+      <button class="nav-btn" onclick="showScreen('progress',this)"><span class="ni">📊</span>My Progress</button>
+    </nav>
+    <div class="sb-foot">
+      <button class="admin-link" onclick="openAdminModal()">⚙️ &nbsp;Admin Panel</button>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <div class="app-main">
+    <div class="topbar">
+      <div>
+        <h2 id="tb-title">Chat with Tutor</h2>
+        <div class="tb-sub" id="tb-sub">Ask me anything — I'm here to help</div>
+      </div>
+      <span class="tb-chip">AI Powered</span>
+    </div>
+
+    <!-- ─ CHAT ─ -->
+    <div class="screen show" id="s-chat">
+      <div class="chat-wrap" id="chat-msgs">
+        <div class="msg b">
+          <div class="av-c">🤖</div>
+          <div class="bubble">Hi! I'm EduBot 👋 Ask me to explain anything, quiz you, or help with homework. What shall we learn today?</div>
+        </div>
+      </div>
+      <div class="chat-bar">
+        <textarea id="chat-inp" rows="1" placeholder="Type a question… (Enter to send, Shift+Enter = new line)" onkeydown="chatKey(event)" oninput="autoH(this)"></textarea>
+        <button class="btn btn-primary" id="chat-btn" onclick="sendChat()">Send ➤</button>
+      </div>
+    </div>
+
+    <!-- ─ QUIZ ─ -->
+    <div class="screen" id="s-quiz">
+      <div class="quiz-setup">
+        <h3>📝 Generate a Quiz</h3>
+        <div class="setup-grid">
+          <div class="fgroup">
+            <label>Topic</label>
+            <input class="finput" id="quiz-topic" placeholder="e.g. Photosynthesis, Algebra, World War II…"/>
+          </div>
+          <div class="fgroup">
+            <label>Grade</label>
+            <select class="finput" id="quiz-grade"></select>
+          </div>
+          <div class="fgroup">
+            <label>Questions</label>
+            <select class="finput" id="quiz-num">
+              <option value="3">3 questions</option>
+              <option value="5" selected>5 questions</option>
+              <option value="8">8 questions</option>
+              <option value="10">10 questions</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:16px">
+          <button class="btn btn-primary" id="quiz-gen-btn" onclick="generateQuiz()">⚡ Generate Quiz</button>
+          <span id="quiz-status" style="font-size:.81rem;color:var(--muted)"></span>
+        </div>
+      </div>
+      <div id="quiz-list" class="quiz-list"></div>
+      <div id="quiz-actions" style="display:none;gap:10px;align-items:center">
+        <button class="btn btn-success" onclick="submitQuiz()">✓ Submit &amp; Score</button>
+        <button class="btn btn-ghost" onclick="generateQuiz()">🔄 New Quiz</button>
+      </div>
+      <div id="quiz-score"></div>
+    </div>
+
+    <!-- ─ TOOLS ─ -->
+    <div class="screen" id="s-tools">
+      <div class="tools-intro">
+        <h2>Learning Tools</h2>
+        <p>Supercharge your studies with AI-powered utilities</p>
+      </div>
+      <div class="tools-grid">
+
+        <!-- Check Answer -->
+        <div class="tcard">
+          <div class="tcard-hd">
+            <div class="tico purple">✅</div>
+            <div class="meta"><h4>Check My Answer</h4><p>Paste a question and your answer — get instant AI feedback</p></div>
+          </div>
+          <div class="tcard-sep"></div>
+          <div class="fgroup" style="margin:0"><label>The Question</label>
+            <textarea class="finput" id="eval-q" rows="2" placeholder="Paste or type the question…"></textarea></div>
+          <div class="fgroup" style="margin:0"><label>My Answer</label>
+            <input class="finput" id="eval-my" placeholder="What I wrote…"/></div>
+          <div class="fgroup" style="margin:0"><label>Correct Answer</label>
+            <input class="finput" id="eval-correct" placeholder="Expected answer…"/></div>
+          <button class="btn btn-primary btn-sm" id="eval-btn" onclick="evalAnswer()">Get Feedback</button>
+          <div class="tout" id="eval-out"></div>
+        </div>
+
+        <!-- Simplify -->
+        <div class="tcard">
+          <div class="tcard-hd">
+            <div class="tico sky">🔍</div>
+            <div class="meta"><h4>Simplify a Concept</h4><p>Turn complex text into easy language for your grade level</p></div>
+          </div>
+          <div class="tcard-sep"></div>
+          <div class="fgroup" style="margin:0"><label>Complex Text</label>
+            <textarea class="finput" id="simp-text" rows="4" placeholder="Paste any paragraph…"></textarea></div>
+          <div class="fgroup" style="margin:0"><label>Simplify For</label>
+            <select class="finput" id="simp-grade"></select></div>
+          <button class="btn btn-primary btn-sm" id="simp-btn" onclick="simplify()">✨ Simplify It</button>
+          <div class="tout" id="simp-out"></div>
+        </div>
+
+        <!-- Study Tip -->
+        <div class="tcard">
+          <div class="tcard-hd">
+            <div class="tico amber">💡</div>
+            <div class="meta"><h4>Personalized Study Tip</h4><p>Based on your weak topics and learning profile</p></div>
+          </div>
+          <div class="tcard-sep"></div>
+          <p style="font-size:.83rem;color:var(--muted);line-height:1.5">EduBot analyses your profile and generates the most useful study tip just for you.</p>
+          <button class="btn btn-primary btn-sm" id="tip-btn" onclick="getStudyTip()">💡 Get My Tip</button>
+          <div class="tout" id="tip-out"></div>
+        </div>
+
+        <!-- Reset Chat -->
+        <div class="tcard">
+          <div class="tcard-hd">
+            <div class="tico rose">🔄</div>
+            <div class="meta"><h4>Reset Chat Session</h4><p>Clear conversation history &amp; start fresh</p></div>
+          </div>
+          <div class="tcard-sep"></div>
+          <p style="font-size:.83rem;color:var(--muted);line-height:1.5">Useful when switching topics. EduBot will forget previous context and begin anew.</p>
+          <button class="btn btn-danger btn-sm" onclick="resetChat()">🗑️ Clear History</button>
+          <div class="tout" id="reset-out"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─ PROGRESS ─ -->
+    <div class="screen" id="s-progress">
+      <div class="stats-row">
+        <div class="sbox"><div class="val" id="p-grade">—</div><div class="lbl">Grade Level</div></div>
+        <div class="sbox"><div class="val" id="p-lessons">0</div><div class="lbl">Lessons Done</div></div>
+        <div class="sbox"><div class="val" id="p-weak-ct">0</div><div class="lbl">Topics to Improve</div></div>
+      </div>
+      <div class="pcard">
+        <h4>⚠️ Weak Topics <span style="font-size:.7rem;font-weight:400;color:var(--muted)">(keep practicing these)</span></h4>
+        <div id="p-weak-tags"><span class="no-data">None yet — great job! 🎉</span></div>
+      </div>
+      <div class="pcard">
+        <h4>✅ Completed Lessons</h4>
+        <div id="p-lesson-tags"><span class="no-data">No lessons marked yet</span></div>
+        <div class="lesson-row">
+          <input id="lesson-inp" placeholder="Lesson name, e.g. The Solar System…" onkeydown="if(event.key==='Enter')markLesson()"/>
+          <button class="btn btn-success btn-sm" onclick="markLesson()">+ Mark Complete</button>
+        </div>
+        <div class="alert" id="lesson-msg" style="margin-top:8px"></div>
+      </div>
+      <div style="text-align:right">
+        <button class="btn btn-ghost btn-sm" onclick="loadProgress()">🔄 Refresh</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════
+     PAGE 3 — ADMIN
+════════════════════════ -->
+<div class="page" id="page-admin">
+  <div class="admin-bar">
+    <div class="brand">⚙️ &nbsp;Admin Panel</div>
+    <button class="btn btn-ghost btn-sm" onclick="goApp()">← Back to App</button>
+  </div>
+  <div class="admin-body">
+    <div class="admin-grid">
+      <div class="acard">
+        <h3>➕ Register New Student</h3>
+        <div class="fgroup"><label>Full Name</label>
+          <input class="finput" id="a-name" placeholder="Student full name"/></div>
+        <div class="fgroup"><label>Grade Level</label>
+          <select class="finput" id="a-grade">
+            <option value="" disabled selected>Select grade</option>
+            <option value="1">Grade 1</option><option value="2">Grade 2</option>
+            <option value="3">Grade 3</option><option value="4">Grade 4</option>
+            <option value="5">Grade 5</option><option value="6">Grade 6</option>
+            <option value="7">Grade 7</option><option value="8">Grade 8</option>
+            <option value="9">Grade 9</option><option value="10">Grade 10</option>
+            <option value="11">Grade 11</option><option value="12">Grade 12</option>
+          </select></div>
+        <div class="alert" id="a-msg"></div>
+        <button class="btn btn-primary" onclick="adminRegister()">Register Student</button>
+      </div>
+      <div class="acard">
+        <h3>👥 All Students</h3>
+        <div id="a-list"><span class="no-data">Loading…</span></div>
+        <button class="btn btn-ghost btn-sm" style="margin-top:12px" onclick="loadAdminStudents()">🔄 Refresh</button>
+      </div>
+    </div>
+
+    <!-- Curriculum / RAG Management -->
+    <div class="acard" style="grid-column:1/-1">
+      <h3>📚 Curriculum / Knowledge Base
+        <span style="font-size:.7rem;font-weight:500;color:var(--muted);margin-left:8px">— Upload PDFs so EduBot answers from YOUR content</span>
+      </h3>
+
+      <div class="upload-zone" id="upload-zone" onclick="document.getElementById('pdf-file').click()"
+           ondrop="handleDrop(event)" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')">
+        <div class="up-icon">📄</div>
+        <div class="up-title">Click to select a PDF or drag &amp; drop here</div>
+        <div class="up-sub" id="up-sub">Textbooks, lesson notes, syllabus — any educational PDF</div>
+        <input type="file" id="pdf-file" accept=".pdf" style="display:none" onchange="handleFile()"/>
+      </div>
+
+      <div class="upload-row">
+        <div class="fgroup" style="margin:0;flex:1">
+          <label>Apply to Grade (optional)</label>
+          <select class="finput" id="up-grade">
+            <option value="0" selected>All Grades (general)</option>
+            <option value="1">Grade 1</option><option value="2">Grade 2</option>
+            <option value="3">Grade 3</option><option value="4">Grade 4</option>
+            <option value="5">Grade 5</option><option value="6">Grade 6</option>
+            <option value="7">Grade 7</option><option value="8">Grade 8</option>
+            <option value="9">Grade 9</option><option value="10">Grade 10</option>
+            <option value="11">Grade 11</option><option value="12">Grade 12</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" id="up-btn" onclick="uploadPdf()" disabled>⬆ Upload &amp; Index</button>
+      </div>
+      <div class="alert" id="up-msg"></div>
+
+      <div class="kb-stats" id="kb-stats"></div>
+      <div id="kb-list" style="margin-top:12px"></div>
+      <button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="loadCurriculum()">🔄 Refresh Library</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API='http://localhost:8000/api';
+let me=null, selId=null, quizData=[];
+
+/* ── helpers ── */
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const ini=n=>n.split(' ').map(w=>w[0]||'').join('').toUpperCase().slice(0,2)||'?';
+function flash(id,txt,type){
+  const el=document.getElementById(id);if(!el)return;
+  el.textContent=txt;el.className=`alert alert-${type} show`;
+  setTimeout(()=>el.classList.remove('show'),5000);
+}
+function showOut(id,txt){const el=document.getElementById(id);el.textContent=txt;el.classList.add('show');}
+
+/* ── LANDING ── */
+function lswitchTab(tab,btn){
+  document.querySelectorAll('.ltab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.ltab-panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('lt-'+tab).classList.add('active');
+}
+async function loadStudentPicker(){
+  const el=document.getElementById('student-picker');
+  try{
+    const r=await fetch(`${API}/students`);const d=await r.json();
+    const ids=Object.keys(d);
+    if(!ids.length){el.innerHTML='<div class="no-students">No students yet. Switch to <b>New Student</b> tab.</div>';return;}
+    el.innerHTML=ids.map(id=>{
+      const s=d[id];
+      const wk=s.weak_topics?.length?`⚠️ Weak: ${s.weak_topics.slice(0,2).join(', ')}`:'✅ All caught up';
+      return `<div class="spick" id="sp-${id}" onclick="pickSt('${id}')">
+        <div class="av">${ini(s.name)}</div>
+        <div class="si"><div class="sn">${esc(s.name)}</div><div class="sm">Grade ${s.grade} &nbsp;·&nbsp; ${wk}</div></div>
+        <div class="tick">✓</div></div>`;
+    }).join('');
+  }catch{el.innerHTML='<div class="no-students" style="color:#e11d48">⚠️ Cannot connect to server. Make sure it is running.</div>';}
+}
+function pickSt(id){
+  selId=id;
+  document.querySelectorAll('.spick').forEach(e=>e.classList.remove('sel'));
+  document.getElementById('sp-'+id)?.classList.add('sel');
+}
+async function loginExisting(){
+  const id=document.getElementById('login-id').value.trim().toUpperCase();
+  const name=document.getElementById('login-name').value.trim();
+  if(!id)return flash('login-msg','Please enter your Student ID','error');
+  if(!name)return flash('login-msg','Please enter your full name','error');
+  try{
+    const r=await fetch(`${API}/students/${encodeURIComponent(id)}`);
+    if(!r.ok)return flash('login-msg','❌ No account found with that ID','error');
+    const profile=await r.json();
+    if(profile.name.trim().toLowerCase()!==name.toLowerCase())
+      return flash('login-msg','❌ Name does not match this Student ID','error');
+    me={...profile,id};enterApp();
+  }catch{flash('login-msg','Connection error','error');}
+}
+async function registerStudent(){
+  const name=document.getElementById('reg-name').value.trim();
+  const grade=parseInt(document.getElementById('reg-grade').value);
+  if(!name)return flash('reg-msg','Please enter your name','error');
+  if(!grade)return flash('reg-msg','Please select a grade','error');
+  const btn=document.getElementById('reg-btn');
+  btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Creating…';
+  const nid=await nextId();
+  const r=await fetch(`${API}/students`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({student_id:nid,name,grade})});
+  if(r.ok){
+    const d=await r.json();
+    me={...d.profile,id:nid};
+    alert(`✅ Account created!\n\nYour Student ID: ${nid}\n\n⚠️  IMPORTANT: Save this ID — you'll need it next time to log in along with your name "${name}".`);
+    enterApp();
+  }
+  else flash('reg-msg','Error creating profile. Try again.','error');
+  btn.disabled=false;btn.textContent='Create Account & Start Learning 🚀';
+}
+async function nextId(){
+  try{const r=await fetch(`${API}/students`);const d=await r.json();return 'S'+String(Object.keys(d).length+1).padStart(3,'0');}
+  catch{return 'S'+Date.now();}
+}
+
+/* ── APP ── */
+function enterApp(){
+  document.getElementById('page-landing').classList.remove('show');
+  document.getElementById('page-app').classList.add('show');
+  updateSb();
+  addBot(`Welcome, ${me.name}! 👋 I'm your Grade ${me.grade} tutor. What would you like to learn today?`);
+  ['quiz-grade','simp-grade'].forEach(id=>{const s=document.getElementById(id);if(s)s.value=me.grade;});
+}
+function updateSb(){
+  document.getElementById('sb-av').textContent=ini(me.name);
+  document.getElementById('sb-name').textContent=me.name;
+  document.getElementById('sb-grade').textContent='Grade '+me.grade;
+  const w=me.weak_topics||[];
+  document.getElementById('sb-weak').textContent=w.length?'⚠️ Focus: '+w.slice(0,2).join(', '):'✅ On track';
+}
+function showScreen(name,btn){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('show'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('s-'+name).classList.add('show');
+  btn?.classList.add('active');
+  const m={chat:['Chat with Tutor','Ask me anything — concepts, problems, homework'],quiz:['Take a Quiz','Generate and answer a quiz on any topic'],tools:['Learning Tools','Evaluate answers, simplify concepts, get study tips'],progress:['My Progress','Track your learning journey']};
+  const[t,s]=m[name]||[name,''];
+  document.getElementById('tb-title').textContent=t;
+  document.getElementById('tb-sub').textContent=s;
+  if(name==='progress')loadProgress();
+}
+function goAdmin(){document.getElementById('page-landing').classList.remove('show');document.getElementById('page-app').classList.remove('show');document.getElementById('page-admin').classList.add('show');loadAdminStudents();loadCurriculum();}
+
+/* ── Admin password modal ── */
+function openAdminModal(){
+  document.getElementById('admin-pw').value='';
+  document.getElementById('admin-pw-msg').className='alert';
+  document.getElementById('admin-pw-msg').textContent='';
+  document.getElementById('admin-modal').classList.add('show');
+  setTimeout(()=>document.getElementById('admin-pw').focus(),100);
+}
+function closeAdminModal(){document.getElementById('admin-modal').classList.remove('show');}
+async function submitAdminLogin(){
+  const pw=document.getElementById('admin-pw').value.trim();
+  if(!pw){flash('admin-pw-msg','Please enter a password','error');return;}
+  try{
+    const r=await fetch(`${API}/admin/login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});
+    if(r.ok){closeAdminModal();goAdmin();}
+    else{flash('admin-pw-msg','❌ Wrong password','error');document.getElementById('admin-pw').value='';}
+  }catch{flash('admin-pw-msg','Connection error','error');}
+}
+function goApp(){document.getElementById('page-admin').classList.remove('show');document.getElementById('page-app').classList.add('show');}
+
+/* ── CHAT ── */
+function addBot(txt){const b=document.getElementById('chat-msgs');const d=document.createElement('div');d.className='msg b';d.innerHTML=`<div class="av-c">🤖</div><div class="bubble">${esc(txt)}</div>`;b.appendChild(d);b.scrollTop=b.scrollHeight;}
+function addUser(txt){const b=document.getElementById('chat-msgs');const d=document.createElement('div');d.className='msg u';d.innerHTML=`<div class="av-c">👤</div><div class="bubble">${esc(txt)}</div>`;b.appendChild(d);b.scrollTop=b.scrollHeight;}
+function chatKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();}}
+function autoH(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,110)+'px';}
+async function sendChat(){
+  const inp=document.getElementById('chat-inp');const msg=inp.value.trim();if(!msg||!me)return;
+  inp.value='';inp.style.height='auto';addUser(msg);
+  const b=document.getElementById('chat-msgs');
+  const t=document.createElement('div');t.className='msg b';t.id='typing';
+  t.innerHTML=`<div class="av-c">🤖</div><div class="bubble"><div class="typing-dots"><span></span><span></span><span></span></div></div>`;
+  b.appendChild(t);b.scrollTop=b.scrollHeight;
+  document.getElementById('chat-btn').disabled=true;
+  try{
+    const r=await fetch(`${API}/chat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({student_id:me.id,message:msg})});
+    const d=await r.json();document.getElementById('typing')?.remove();
+    addBot(r.ok?d.reply:(d.detail||'Something went wrong. Check your API key in .env'));
+  }catch{document.getElementById('typing')?.remove();addBot('Connection error. Is the server running?');}
+  document.getElementById('chat-btn').disabled=false;
+}
+async function resetChat(){
+  await fetch(`${API}/chat/reset?student_id=${me.id}`,{method:'POST'});
+  document.getElementById('chat-msgs').innerHTML='';
+  addBot('Chat cleared! Fresh start 😊 What would you like to study?');
+  showOut('reset-out','✅ Chat history cleared successfully.');
+}
+
+/* ── QUIZ ── */
+async function generateQuiz(){
+  const topic=document.getElementById('quiz-topic').value.trim();
+  const grade=parseInt(document.getElementById('quiz-grade').value);
+  const num=parseInt(document.getElementById('quiz-num').value);
+  if(!topic)return alert('Please enter a topic');
+  const btn=document.getElementById('quiz-gen-btn');const st=document.getElementById('quiz-status');
+  btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Generating…';st.textContent='';
+  document.getElementById('quiz-list').innerHTML='';document.getElementById('quiz-actions').style.display='none';document.getElementById('quiz-score').innerHTML='';quizData=[];
+  try{
+    const r=await fetch(`${API}/quiz`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic,grade,num_questions:num})});
+    const d=await r.json();
+    if(r.ok)renderQuiz(d.quiz);else st.textContent='⚠️ '+(d.detail||'Error generating quiz');
+  }catch{st.textContent='⚠️ Connection error. Check your API key.';}
+  btn.disabled=false;btn.textContent='⚡ Generate Quiz';
+}
+function renderQuiz(raw){
+  const list=document.getElementById('quiz-list');quizData=[];
+  const blocks=raw.split(/\n(?=Q\d+\.)/);
+  blocks.forEach((block,qi)=>{
+    const lines=block.trim().split('\n').filter(l=>l.trim());if(!lines.length)return;
+    const qText=lines[0].replace(/^Q\d+\.\s*/,'').trim();
+    const opts=[];let ans='',expl='';
+    lines.slice(1).forEach(l=>{
+      if(/^[A-D]\)/.test(l))opts.push(l.trim());
+      else if(/^Answer:/i.test(l))ans=l.replace(/^Answer:\s*/i,'').trim().toUpperCase();
+      else if(/^Explanation:/i.test(l))expl=l.replace(/^Explanation:\s*/i,'').trim();
+    });
+    if(!qText||opts.length<2)return;
+    quizData.push({qText,opts,ans,expl});
+    const card=document.createElement('div');card.className='qcard';card.id='qc-'+qi;
+    card.innerHTML=`<div class="qnum">Question ${qi+1}</div>
+      <div class="qtext">${esc(qText)}</div>
+      <div class="opt-list">${opts.map((o,oi)=>`<label class="opt" id="op-${qi}-${oi}" onclick="pickOpt(${qi},${oi})"><input type="radio" name="q${qi}" value="${o[0]}"> ${esc(o)}</label>`).join('')}</div>
+      <div class="qfb" id="qf-${qi}"></div>`;
+    list.appendChild(card);
+  });
+  if(quizData.length){const a=document.getElementById('quiz-actions');a.style.display='flex';}
+  else list.innerHTML='<div style="color:var(--muted);text-align:center;padding:24px">Could not parse quiz. Try a different topic or wording.</div>';
+}
+function pickOpt(qi,oi){document.querySelectorAll(`[id^="op-${qi}-"]`).forEach(e=>e.classList.remove('picked'));document.getElementById(`op-${qi}-${oi}`)?.classList.add('picked');}
+function submitQuiz(){
+  let score=0;
+  quizData.forEach((q,qi)=>{
+    const sel=document.querySelector(`input[name="q${qi}"]:checked`);
+    const fb=document.getElementById('qf-'+qi);const card=document.getElementById('qc-'+qi);
+    const letter=sel?.value?.toUpperCase();
+    const cIdx=q.opts.findIndex(o=>o[0].toUpperCase()===q.ans);
+    document.querySelectorAll(`[id^="op-${qi}-"]`).forEach((el,i)=>{
+      if(i===cIdx)el.classList.add('c-ok');
+      else if(el.classList.contains('picked'))el.classList.add('c-no');
+    });
+    if(!letter){fb.className='qfb show no';fb.textContent=`⚠️ Not answered. Correct: ${q.ans}${q.expl?' — '+q.expl:''}`;card.classList.add('no');}
+    else if(letter===q.ans){score++;fb.className='qfb show ok';fb.textContent=`✅ Correct! ${q.expl||''}`;card.classList.add('ok');}
+    else{fb.className='qfb show no';fb.textContent=`❌ Correct answer is ${q.ans}. ${q.expl||''}`;card.classList.add('no');}
+  });
+  const pct=quizData.length?Math.round(score/quizData.length*100):0;
+  const em=pct>=90?'🏆':pct>=70?'👍':pct>=50?'💪':'📚';
+  const lb=pct>=90?'Excellent! You nailed it!':pct>=70?'Good job! Keep going!':pct>=50?'Halfway there — keep practicing!':'More study needed — you can do it!';
+  document.getElementById('quiz-score').innerHTML=`<div class="score-banner"><div class="emoj">${em}</div><div class="big">${score}/${quizData.length}</div><div class="lbl">${pct}% &nbsp;·&nbsp; ${lb}</div></div>`;
+  document.getElementById('quiz-actions').style.display='none';
+  document.getElementById('quiz-score').scrollIntoView({behavior:'smooth'});
+}
+
+/* ── TOOLS ── */
+async function evalAnswer(){
+  const q=document.getElementById('eval-q').value.trim();
+  const my=document.getElementById('eval-my').value.trim();
+  const cor=document.getElementById('eval-correct').value.trim();
+  if(!q||!my||!cor)return alert('Please fill all three fields');
+  const btn=document.getElementById('eval-btn');btn.disabled=true;btn.innerHTML='<span class="spinner"></span>';
+  try{const r=await fetch(`${API}/evaluate`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q,student_answer:my,correct_answer:cor,grade:me.grade})});const d=await r.json();showOut('eval-out',r.ok?d.feedback:(d.detail||'Error'));}
+  catch{showOut('eval-out','Connection error.');}
+  btn.disabled=false;btn.textContent='Get Feedback';
+}
+async function simplify(){
+  const text=document.getElementById('simp-text').value.trim();
+  const grade=parseInt(document.getElementById('simp-grade').value);
+  if(!text)return alert('Please paste some text');
+  const btn=document.getElementById('simp-btn');btn.disabled=true;btn.innerHTML='<span class="spinner"></span>';
+  try{const r=await fetch(`${API}/simplify`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,grade})});const d=await r.json();showOut('simp-out',r.ok?d.simplified:(d.detail||'Error'));}
+  catch{showOut('simp-out','Connection error.');}
+  btn.disabled=false;btn.textContent='✨ Simplify It';
+}
+async function getStudyTip(){
+  const btn=document.getElementById('tip-btn');btn.disabled=true;btn.innerHTML='<span class="spinner"></span>';
+  try{const r=await fetch(`${API}/study-tip`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({student_id:me.id})});const d=await r.json();showOut('tip-out',r.ok?d.tip:(d.detail||'Error'));}
+  catch{showOut('tip-out','Connection error.');}
+  btn.disabled=false;btn.textContent='💡 Get My Tip';
+}
+
+/* ── PROGRESS ── */
+async function loadProgress(){
+  if(!me)return;
+  const r=await fetch(`${API}/students/${me.id}`);if(!r.ok)return;
+  const p=await r.json();me={...p,id:me.id};
+  document.getElementById('p-grade').textContent=p.grade;
+  document.getElementById('p-lessons').textContent=(p.completed_lessons||[]).length;
+  document.getElementById('p-weak-ct').textContent=(p.weak_topics||[]).length;
+  const wt=document.getElementById('p-weak-tags');
+  wt.innerHTML=(p.weak_topics||[]).length?(p.weak_topics.map(t=>`<span class="tag tag-red">${esc(t)}</span>`).join('')):'<span class="no-data">None yet — great job! 🎉</span>';
+  const lt=document.getElementById('p-lesson-tags');
+  lt.innerHTML=(p.completed_lessons||[]).length?(p.completed_lessons.map(l=>`<span class="tag tag-green">${esc(l)}</span>`).join('')):'<span class="no-data">No lessons marked complete yet</span>';
+  updateSb();
+}
+async function markLesson(){
+  const lesson=document.getElementById('lesson-inp').value.trim();if(!lesson)return;
+  const r=await fetch(`${API}/students/${me.id}/complete-lesson?lesson=${encodeURIComponent(lesson)}`,{method:'POST'});
+  const d=await r.json();
+  if(r.ok){document.getElementById('lesson-inp').value='';flash('lesson-msg',`✅ "${lesson}" marked complete!`,'success');loadProgress();}
+  else flash('lesson-msg',d.detail||'Error','error');
+}
+
+/* ── ADMIN ── */
+async function loadAdminStudents(){
+  const el=document.getElementById('a-list');
+  try{
+    const r=await fetch(`${API}/students`);const d=await r.json();const ids=Object.keys(d);
+    if(!ids.length){el.innerHTML='<span class="no-data">No students yet.</span>';return;}
+    el.innerHTML=ids.map(id=>{const s=d[id];return `<div class="srow"><div class="av">${ini(s.name)}</div><div class="info"><div class="nm">${esc(s.name)}</div><div class="mt">ID: ${esc(id)} · Grade ${s.grade}</div></div><div class="acts"><button class="btn btn-primary btn-sm" onclick="adminLogin('${id}')">Login</button></div></div>`;}).join('');
+  }catch{el.innerHTML='<span class="no-data" style="color:#e11d48">Connection error</span>';}
+}
+async function adminRegister(){
+  const name=document.getElementById('a-name').value.trim();const grade=parseInt(document.getElementById('a-grade').value);
+  if(!name)return flash('a-msg','Enter a name','error');if(!grade)return flash('a-msg','Select a grade','error');
+  const nid=await nextId();
+  const r=await fetch(`${API}/students`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({student_id:nid,name,grade})});
+  if(r.ok){flash('a-msg',`✅ "${name}" registered (ID: ${nid})`,'success');document.getElementById('a-name').value='';document.getElementById('a-grade').value='';loadAdminStudents();}
+  else flash('a-msg','Error registering','error');
+}
+async function adminLogin(id){
+  const r=await fetch(`${API}/students/${id}`);if(!r.ok)return;
+  me={...(await r.json()),id};goApp();updateSb();
+}
+
+/* ── CURRICULUM / RAG ── */
+let pendingFile = null;
+
+function handleFile() {
+  const f = document.getElementById('pdf-file').files[0];
+  if (!f) return;
+  pendingFile = f;
+  document.getElementById('up-sub').textContent = `📎 Selected: ${f.name} (${(f.size/1024).toFixed(0)} KB)`;
+  document.getElementById('up-btn').disabled = false;
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('upload-zone').classList.remove('drag');
+  const f = e.dataTransfer.files[0];
+  if (!f) return;
+  if (!f.name.toLowerCase().endsWith('.pdf')) return flash('up-msg', 'Only PDF files are accepted', 'error');
+  pendingFile = f;
+  document.getElementById('up-sub').textContent = `📎 Selected: ${f.name} (${(f.size/1024).toFixed(0)} KB)`;
+  document.getElementById('up-btn').disabled = false;
+}
+
+async function uploadPdf() {
+  if (!pendingFile) return;
+  const grade = document.getElementById('up-grade').value;
+  const btn = document.getElementById('up-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Indexing… (may take 30s+)';
+
+  const fd = new FormData();
+  fd.append('file', pendingFile);
+  fd.append('grade', grade);
+
+  try {
+    const r = await fetch(`${API}/curriculum/upload`, { method: 'POST', body: fd });
+    const d = await r.json();
+    if (r.ok) {
+      flash('up-msg', `✅ Indexed ${d.pages} pages → ${d.chunks} chunks. EduBot now knows this content!`, 'success');
+      pendingFile = null;
+      document.getElementById('pdf-file').value = '';
+      document.getElementById('up-sub').textContent = 'Textbooks, lesson notes, syllabus — any educational PDF';
+      loadCurriculum();
+    } else {
+      flash('up-msg', d.detail || 'Upload failed', 'error');
+    }
+  } catch {
+    flash('up-msg', 'Connection error during upload', 'error');
+  }
+  btn.disabled = true; btn.textContent = '⬆ Upload & Index';
+}
+
+async function loadCurriculum() {
+  const list = document.getElementById('kb-list');
+  const stats = document.getElementById('kb-stats');
+  try {
+    const r = await fetch(`${API}/curriculum`);
+    const d = await r.json();
+    const sources = d.sources || [];
+    if (!sources.length) {
+      list.innerHTML = '<span class="no-data">No curriculum uploaded yet. Drop a PDF above to teach EduBot from your content.</span>';
+      stats.classList.remove('show');
+      return;
+    }
+    stats.textContent = `📊 Knowledge base: ${sources.length} document(s) · ${d.total_chunks} indexed chunks`;
+    stats.classList.add('show');
+    list.innerHTML = sources.map(s => {
+      const gradeLabel = s.grade && s.grade > 0 ? `Grade ${s.grade}` : 'All grades';
+      return `<div class="kb-row">
+        <div class="pdf-ico">📄</div>
+        <div class="info"><div class="nm">${esc(s.source)}</div>
+          <div class="mt">${gradeLabel} &nbsp;·&nbsp; ${s.chunks} chunks indexed</div></div>
+        <button class="del" onclick="deleteCurriculum('${esc(s.source).replace(/'/g,"\\'")}')" title="Remove">🗑️</button>
+      </div>`;
+    }).join('');
+  } catch {
+    list.innerHTML = '<span class="no-data" style="color:var(--rose)">Could not load curriculum.</span>';
+  }
+}
+
+async function deleteCurriculum(name) {
+  if (!confirm(`Remove "${name}" from EduBot's knowledge base?`)) return;
+  const r = await fetch(`${API}/curriculum/${encodeURIComponent(name)}`, { method: 'DELETE' });
+  if (r.ok) { flash('up-msg', `🗑️ "${name}" removed`, 'success'); loadCurriculum(); }
+  else flash('up-msg', 'Could not delete', 'error');
+}
+
+/* ── INIT ── */
+function buildGrades(sid){
+  const s=document.getElementById(sid);if(!s)return;s.innerHTML='';
+  for(let g=1;g<=12;g++){const o=document.createElement('option');o.value=g;o.textContent=`Grade ${g}`;if(g===8)o.selected=true;s.appendChild(o);}
+}
+['quiz-grade','simp-grade'].forEach(buildGrades);
+</script>
+</body>
+</html>
