@@ -65,5 +65,53 @@
     "completed_lessons": [
       "solar"
     ]
+  },
+  "S009": {
+    "name": "a",
+    "grade": 1,
+    "weak_topics": [],
+    "completed_lessons": []
+  },
+  "S010": {
+    "name": "aa",
+    "grade": 12,
+    "weak_topics": [],
+    "completed_lessons": []
+  },
+  "S011": {
+    "name": "Av",
+    "grade": 11,
+    "weak_topics": [],
+    "completed_lessons": []
+  },
+  "S012": {
+    "name": "aaaa",
+    "grade": 12,
+    "weak_topics": [],
+    "completed_lessons": []
+  },
+  "S013": {
+    "name": "aa",
+    "grade": 12,
+    "weak_topics": [],
+    "completed_lessons": []
+  },
+  "S014": {
+    "name": "007",
+    "grade": 11,
+    "weak_topics": [],
+    "completed_lessons": []
+  },
+  "S015": {
+    "name": "Av",
+    "grade": 11,
+    "weak_topics": [],
+    "completed_lessons": []
+  },
+  "S016": {
+    "name": "S007",
+    "grade": 12,
+    "weak_topics": [],
+    "completed_lessons": []
   }
 }
