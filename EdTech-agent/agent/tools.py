@@ -15,7 +15,8 @@ def generate_quiz(topic: str, grade: int, num_questions: int = 5) -> str:
     response = client.chat.completions.create(
         model=MODEL_NAME,
         messages=[{"role": "user", "content": prompt}],
-        temperature=0.7
+        temperature=0.7,
+        max_tokens=800
     )
     return response.choices[0].message.content
 
@@ -31,7 +32,8 @@ def evaluate_answer(question: str, student_answer: str, correct_answer: str, gra
     response = client.chat.completions.create(
         model=MODEL_NAME,
         messages=[{"role": "user", "content": prompt}],
-        temperature=0.5
+        temperature=0.5,
+        max_tokens=400
     )
     return response.choices[0].message.content
 
@@ -42,7 +44,8 @@ def simplify_explanation(text: str, grade: int) -> str:
     response = client.chat.completions.create(
         model=MODEL_NAME,
         messages=[{"role": "user", "content": prompt}],
-        temperature=0.6
+        temperature=0.6,
+        max_tokens=250
     )
     return response.choices[0].message.content
 

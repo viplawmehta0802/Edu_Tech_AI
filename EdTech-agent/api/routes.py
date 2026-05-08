@@ -90,13 +90,19 @@ def chat(req: ChatRequest):
     try:
         reply = agent.chat(req.message)
     except Exception as e:
-        msg = str(e)
-        if "api_key" in msg.lower() or "authentication" in msg.lower() or "401" in msg:
-            raise HTTPException(status_code=500, detail="❌ OpenAI API key is invalid or missing. Edit edtech-agent/.env and set OPENAI_API_KEY, then restart the server.")
-        if "quota" in msg.lower() or "insufficient" in msg.lower() or "429" in msg:
-            raise HTTPException(status_code=500, detail="❌ OpenAI quota exceeded or billing issue. Check your account at platform.openai.com.")
-        raise HTTPException(status_code=500, detail=f"AI error: {msg[:200]}")
+        raise _format_ai_exception(e)
     return ChatResponse(reply=reply)
+
+
+def _format_ai_exception(e: Exception) -> HTTPException:
+    msg = str(e)
+    if "api_key" in msg.lower() or "authentication" in msg.lower() or "401" in msg:
+        return HTTPException(status_code=500, detail="❌ OpenAI API key is invalid or missing. Edit edtech-agent/.env and set OPENAI_API_KEY, then restart the server.")
+    if "quota" in msg.lower() or "insufficient" in msg.lower() or "429" in msg:
+        return HTTPException(status_code=500, detail="❌ OpenAI quota exceeded or billing issue. Check your account and credits.")
+    if "402" in msg.lower() or "credits" in msg.lower() or "more credits" in msg.lower():
+        return HTTPException(status_code=500, detail="❌ OpenRouter credits are insufficient for this request. Please top up credits or lower the quiz size/model.")
+    return HTTPException(status_code=500, detail=f"AI error: {msg[:200]}")
 
 
 @router.post("/chat/reset", summary="Reset conversation history for a student")
@@ -108,19 +114,28 @@ def reset_chat(student_id: str):
 
 @router.post("/quiz", summary="Generate a quiz on a topic")
 def quiz(req: QuizRequest):
-    result = generate_quiz(req.topic, req.grade, req.num_questions)
+    try:
+        result = generate_quiz(req.topic, req.grade, req.num_questions)
+    except Exception as e:
+        raise _format_ai_exception(e)
     return {"quiz": result}
 
 
 @router.post("/evaluate", summary="Evaluate a student's answer")
 def evaluate(req: EvaluateRequest):
-    feedback = evaluate_answer(req.question, req.student_answer, req.correct_answer, req.grade)
+    try:
+        feedback = evaluate_answer(req.question, req.student_answer, req.correct_answer, req.grade)
+    except Exception as e:
+        raise _format_ai_exception(e)
     return {"feedback": feedback}
 
 
 @router.post("/simplify", summary="Simplify an explanation for a grade level")
 def simplify(req: SimplifyRequest):
-    result = simplify_explanation(req.text, req.grade)
+    try:
+        result = simplify_explanation(req.text, req.grade)
+    except Exception as e:
+        raise _format_ai_exception(e)
     return {"simplified": result}
 
 

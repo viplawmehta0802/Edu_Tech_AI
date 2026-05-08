@@ -1,0 +1,10 @@
+# Python cache
+**/__pycache__/
+**/*.pyc
+
+# Local environment files
+*.env
+EdTech-agent/.env
+
+# Local database files
+**/*.sqlite3
