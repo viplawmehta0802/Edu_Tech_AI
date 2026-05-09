@@ -1,10 +1,12 @@
+import os
 import httpx
 from app.core.config import OPENAI_API_BASE, OPENAI_API_KEY, MODEL_NAME
 
 DEFAULT_BASE = 'https://api.openai.com/v1'
+MAX_TOKENS = int(os.getenv('AI_MAX_TOKENS', '1024'))
 
 
-def _chat(messages: list[dict], temperature: float = 0.7) -> str:
+def _chat(messages: list[dict], temperature: float = 0.7, max_tokens: int | None = None) -> str:
     if not OPENAI_API_KEY:
         return 'AI key not configured. Set OPENAI_API_KEY in environment.'
     base = (OPENAI_API_BASE or DEFAULT_BASE).rstrip('/')
@@ -17,6 +19,7 @@ def _chat(messages: list[dict], temperature: float = 0.7) -> str:
         'model': MODEL_NAME,
         'messages': messages,
         'temperature': temperature,
+        'max_tokens': max_tokens or MAX_TOKENS,
     }
     try:
         with httpx.Client(timeout=60.0) as client:
