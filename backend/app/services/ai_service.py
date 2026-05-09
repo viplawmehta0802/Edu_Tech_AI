@@ -1,19 +1,47 @@
-import os
+import httpx
 from app.core.config import OPENAI_API_BASE, OPENAI_API_KEY, MODEL_NAME
 
-# Placeholder AI logic. Replace with OpenRouter/OpenAI integration.
+DEFAULT_BASE = 'https://api.openai.com/v1'
 
-def generate_response(prompt: str) -> str:
+
+def _chat(messages: list[dict], temperature: float = 0.7) -> str:
     if not OPENAI_API_KEY:
         return 'AI key not configured. Set OPENAI_API_KEY in environment.'
-    return f'[AI response for prompt] {prompt[:120]}'
+    base = (OPENAI_API_BASE or DEFAULT_BASE).rstrip('/')
+    url = f'{base}/chat/completions'
+    headers = {
+        'Authorization': f'Bearer {OPENAI_API_KEY}',
+        'Content-Type': 'application/json',
+    }
+    payload = {
+        'model': MODEL_NAME,
+        'messages': messages,
+        'temperature': temperature,
+    }
+    try:
+        with httpx.Client(timeout=60.0) as client:
+            resp = client.post(url, headers=headers, json=payload)
+            resp.raise_for_status()
+            data = resp.json()
+            return data['choices'][0]['message']['content'].strip()
+    except httpx.HTTPStatusError as e:
+        return f'AI error ({e.response.status_code}): {e.response.text[:200]}'
+    except Exception as e:
+        return f'AI error: {e}'
+
+
+def generate_response(prompt: str) -> str:
+    return _chat([
+        {'role': 'system', 'content': 'You are EduBot, a helpful AI tutor for students in grades 6-12. Explain clearly and encourage curiosity.'},
+        {'role': 'user', 'content': prompt},
+    ])
 
 
 def generate_quiz(topic: str, grade: int, num_questions: int) -> str:
-    return (
-        f'Quiz on {topic} for grade {grade}:\n' +
-        '\n'.join([f'{i+1}. Sample question {i+1}?' for i in range(num_questions)])
-    )
+    return _chat([
+        {'role': 'system', 'content': 'You are a quiz generator. Output numbered questions only, no answers unless asked.'},
+        {'role': 'user', 'content': f'Generate {num_questions} quiz questions on "{topic}" for grade {grade}. Number them 1..{num_questions}.'},
+    ], temperature=0.5)
 
 
 def get_progress_summary(student_id: str) -> dict:
