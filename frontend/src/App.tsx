@@ -1,4 +1,4 @@
-import { useState, type ComponentType } from 'react';
+import { useState, type FC, type ReactElement } from 'react';
 import { Award, BarChart3, BookOpen, Cpu, Sparkles } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
 import Tutor from './pages/Tutor';
@@ -16,7 +16,7 @@ const navItems = [
 
 type NavItemKey = (typeof navItems)[number]['key'];
 
-const activeComponents: Record<NavItemKey, ComponentType> = {
+const activeComponents: Record<NavItemKey, FC> = {
   dashboard: Dashboard,
   tutor: Tutor,
   quiz: Quiz,
@@ -24,9 +24,13 @@ const activeComponents: Record<NavItemKey, ComponentType> = {
   progress: Progress,
 };
 
+function renderActive(key: NavItemKey): ReactElement {
+  const Component = activeComponents[key];
+  return <Component />;
+}
+
 function App() {
   const [active, setActive] = useState<NavItemKey>('dashboard');
-  const ActiveComponent = activeComponents[active];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 text-slate-100">
@@ -77,7 +81,7 @@ function App() {
           </div>
 
           <div className="space-y-6">
-            <ActiveComponent />
+            {renderActive(active)}
           </div>
         </main>
       </div>
