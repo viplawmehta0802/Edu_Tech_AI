@@ -1,4 +1,10 @@
-const API_BASE = import.meta.env.VITE_API_URL?.replace(/\/$/, '') || '/api';
+const rawApiUrl = import.meta.env.VITE_API_URL?.trim() || '';
+const normalizedApiUrl = rawApiUrl.replace(/\/$/, '');
+const API_BASE = normalizedApiUrl
+  ? normalizedApiUrl.endsWith('/api')
+    ? normalizedApiUrl
+    : `${normalizedApiUrl}/api`
+  : '/api';
 
 export interface ChatRequest {
   student_id: string;
