@@ -94,6 +94,14 @@ class StudentMemory:
         """Return all student profiles."""
         return self._load()
 
+    def set_email(self, student_id: str, email: str):
+        """Attach / update the email on a student profile."""
+        data = self._load()
+        if student_id not in data:
+            return
+        data[student_id]["email"] = email
+        self._save(data)
+
     def add_study_plan(self, student_id: str, plan: dict):
         """Add a study plan for the student."""
         data = self._load()
