@@ -9,6 +9,7 @@ from agent.agent import EdTechAgent
 from agent.tools import generate_quiz, evaluate_answer, simplify_explanation, get_study_tip
 from agent.openai_client import client as openai_client
 from agent import rag
+from agent import emailer
 from memory.student_memory import StudentMemory
 from config import ADMIN_PASSWORD, MODEL_NAME
 
@@ -35,7 +36,9 @@ class ChatResponse(BaseModel):
     reply: str
 
 class StudentCreateRequest(BaseModel):
-    student_id: str
+    # Accept either an explicit student_id or, more typically, an email.
+    student_id: str | None = None
+    email: str | None = None
     name: str
     grade: int
 
@@ -78,10 +81,30 @@ def admin_login(payload: dict):
     if payload.get("password") == ADMIN_PASSWORD:
         return {"ok": True}
     raise HTTPException(status_code=401, detail="Invalid password")
-
-
-@router.post("/students", summary="Register a new student")
+ (by email)")
 def create_student(req: StudentCreateRequest):
+    email = (req.email or "").strip().lower() or None
+    sid = (req.student_id or email or "").strip()
+    if not sid:
+        raise HTTPException(status_code=400, detail="Email (or student_id) is required")
+    profile = memory.create_student(sid, req.name, req.grade)
+    # Persist email on the profile for later reference
+    if email:
+        try:
+            memory.set_email(sid, email)
+            profile = memory.get_student(sid) or profile
+        except Exception:
+            pass
+    email_sent = False
+    if email:
+        email_sent = emailer.send_welcome_email(email, req.name, req.grade)
+    return {
+        "message": "Student created",
+        "student_id": sid,
+        "profile": profile,
+        "email_sent": email_sent,
+        "email_configured": emailer.is_configured(),
+    
     profile = memory.create_student(req.student_id, req.name, req.grade)
     return {"message": "Student created", "profile": profile}
 
