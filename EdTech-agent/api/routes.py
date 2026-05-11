@@ -1,12 +1,16 @@
 import os
 import shutil
+import tempfile
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
+from pypdf import PdfReader
 from agent.agent import EdTechAgent
 from agent.tools import generate_quiz, evaluate_answer, simplify_explanation, get_study_tip
+from agent.openai_client import client as openai_client
 from agent import rag
 from memory.student_memory import StudentMemory
-from config import ADMIN_PASSWORD
+from config import ADMIN_PASSWORD, MODEL_NAME
 
 router = APIRouter()
 memory = StudentMemory()
@@ -290,4 +294,147 @@ def delete_curriculum(source_name: str):
         except Exception:
             pass
     return {"message": f"Removed '{source_name}'", "chunks_removed": removed}
+
+
+@router.get("/curriculum/file/{source_name}", summary="Stream a curriculum PDF for viewing")
+def get_curriculum_file(source_name: str):
+    # Prevent path traversal
+    safe_name = os.path.basename(source_name)
+    file_path = os.path.join(rag.CURRICULUM_DIR, safe_name)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="PDF not found")
+    return FileResponse(file_path, media_type="application/pdf", filename=safe_name)
+
+
+# ── Short notes from highlighted text ──────────────────────────────
+
+class NotesRequest(BaseModel):
+    text: str
+    grade: int | None = None
+    style: str | None = "bullets"  # "bullets" | "summary" | "flashcards"
+
+
+@router.post("/notes/summarize", summary="Turn highlighted text into short study notes")
+def summarize_notes(req: NotesRequest):
+    text = (req.text or "").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="Text is empty")
+    if len(text) > 15000:
+        text = text[:15000]
+
+    style = (req.style or "bullets").lower()
+    grade_line = f"Target grade level: {req.grade}." if req.grade else ""
+
+    if style == "flashcards":
+        instruction = (
+            "Convert the following passage into 5–10 study flashcards. "
+            "Use the exact format:\nQ: <question>\nA: <answer>\n\n"
+        )
+    elif style == "summary":
+        instruction = (
+            "Write a concise 3–5 sentence summary of the following passage in clear, simple language. "
+        )
+    else:
+        instruction = (
+            "Turn the following passage into short study notes as 5–10 concise bullet points. "
+            "Capture key terms, definitions, and the main idea. Use plain language."
+        )
+
+    prompt = f"{instruction} {grade_line}\n\nPASSAGE:\n{text}"
+
+    try:
+        resp = openai_client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.4,
+            max_tokens=600,
+        )
+        notes = resp.choices[0].message.content.strip()
+    except Exception as e:
+        raise _format_ai_exception(e)
+    return {"notes": notes, "style": style}
+
+
+# ── Quiz from an uploaded Q&A PDF ──────────────────────────────────
+
+def _extract_full_pdf_text(path: str, max_chars: int = 20000) -> str:
+    reader = PdfReader(path)
+    out: list[str] = []
+    total = 0
+    for page in reader.pages:
+        try:
+            t = page.extract_text() or ""
+        except Exception:
+            continue
+        if not t.strip():
+            continue
+        out.append(t)
+        total += len(t)
+        if total >= max_chars:
+            break
+    return "\n".join(out)[:max_chars]
+
+
+@router.post("/quiz/from-pdf", summary="Generate a quiz from an uploaded Q&A PDF")
+async def quiz_from_pdf(
+    file: UploadFile = File(...),
+    num_questions: int = Form(5),
+    grade: int = Form(0),
+):
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF files are accepted")
+
+    # Save to a temp file (do NOT add to RAG index)
+    tmp_dir = tempfile.mkdtemp(prefix="qa_pdf_")
+    save_path = os.path.join(tmp_dir, file.filename)
+    try:
+        with open(save_path, "wb") as f:
+            shutil.copyfileobj(file.file, f)
+    finally:
+        file.file.close()
+
+    try:
+        text = _extract_full_pdf_text(save_path)
+        if not text.strip():
+            raise HTTPException(status_code=400, detail="Could not extract any text from this PDF")
+
+        grade_line = f"Target the difficulty at grade {grade}." if grade else ""
+        prompt = (
+            f"You are a quiz generator. The text below comes from a study PDF that may already "
+            f"contain questions and answers, or general notes. Produce exactly {num_questions} "
+            f"multiple-choice quiz questions based on its content. {grade_line}\n\n"
+            "Format strictly as:\n"
+            "1. <question>\n"
+            "   A) <option>\n"
+            "   B) <option>\n"
+            "   C) <option>\n"
+            "   D) <option>\n"
+            "   Answer: <letter>\n\n"
+            "Do not invent facts that are not supported by the passage.\n\n"
+            f"PASSAGE:\n{text}"
+        )
+
+        try:
+            resp = openai_client.chat.completions.create(
+                model=MODEL_NAME,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.4,
+                max_tokens=1200,
+            )
+            quiz_text = resp.choices[0].message.content.strip()
+        except Exception as e:
+            raise _format_ai_exception(e)
+
+        return {
+            "quiz": quiz_text,
+            "source": file.filename,
+            "extracted_chars": len(text),
+            "num_questions": num_questions,
+        }
+    finally:
+        # cleanup
+        try:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+        except Exception:
+            pass
 
