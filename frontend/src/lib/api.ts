@@ -42,6 +42,7 @@ export interface QuizResponse {
 export interface StudentProfile {
   name: string;
   grade: number;
+  email?: string;
   weak_topics?: string[];
   completed_lessons?: string[];
   study_plans?: unknown[];
@@ -107,10 +108,17 @@ export const apiClient = {
   },
 
   async createStudent(payload: {
-    student_id: string;
+    student_id?: string;
+    email?: string;
     name: string;
     grade: number;
-  }): Promise<{ message: string; profile: StudentProfile }> {
+  }): Promise<{
+    message: string;
+    student_id: string;
+    profile: StudentProfile;
+    email_sent?: boolean;
+    email_configured?: boolean;
+  }> {
     return http('/students', {
       method: 'POST',
       body: JSON.stringify(payload),
@@ -266,4 +274,3 @@ export const apiClient = {
     };
   },
 };
-
