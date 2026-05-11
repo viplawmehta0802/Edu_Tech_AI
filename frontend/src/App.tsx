@@ -1,5 +1,5 @@
 import { useState, type FC, type ReactElement } from 'react';
-import { Award, BarChart3, BookOpen, Cpu, LogOut, Shield, Sparkles } from 'lucide-react';
+import { Award, BarChart3, BookMarked, BookOpen, Cpu, LogOut, Shield, Sparkles } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
 import Tutor from './pages/Tutor';
 import Quiz from './pages/Quiz';
@@ -7,12 +7,14 @@ import Tools from './pages/Tools';
 import Progress from './pages/Progress';
 import Admin from './pages/Admin';
 import Login from './pages/Login';
+import StudyLab from './pages/StudyLab';
 import { useAuth } from './context/AuthContext';
 
 const navItems = [
   { key: 'dashboard', label: 'Dashboard', icon: BarChart3 },
   { key: 'tutor', label: 'Tutor', icon: BookOpen },
   { key: 'quiz', label: 'Quiz', icon: Sparkles },
+  { key: 'studylab', label: 'Study Lab', icon: BookMarked },
   { key: 'tools', label: 'Tools', icon: Cpu },
   { key: 'progress', label: 'Progress', icon: Award },
   { key: 'admin', label: 'Admin', icon: Shield },
@@ -24,6 +26,7 @@ const activeComponents: Record<NavItemKey, FC> = {
   dashboard: Dashboard,
   tutor: Tutor,
   quiz: Quiz,
+  studylab: StudyLab,
   tools: Tools,
   progress: Progress,
   admin: Admin,
