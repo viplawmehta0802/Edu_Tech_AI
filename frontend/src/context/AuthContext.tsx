@@ -16,7 +16,8 @@ interface AuthState {
 }
 
 interface AuthContextValue extends AuthState {
-  loginStudent: (studentId: string) => Promise<void>;
+  loginStudent: (email: string, password: string) => Promise<void>;
+  setSession: (studentId: string, profile: StudentProfile) => void;
   logoutStudent: () => void;
   loginAdmin: (password: string) => Promise<void>;
   logoutAdmin: () => void;
@@ -60,8 +61,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [state.studentId]);
 
-  const loginStudent = useCallback(async (studentId: string) => {
-    const profile = await apiClient.getStudent(studentId);
+  const loginStudent = useCallback(async (email: string, password: string) => {
+    const { student_id, profile } = await apiClient.loginStudent(email, password);
+    setState((s) => ({ ...s, studentId: student_id, profile }));
+  }, []);
+
+  const setSession = useCallback((studentId: string, profile: StudentProfile) => {
     setState((s) => ({ ...s, studentId, profile }));
   }, []);
 
@@ -82,12 +87,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       ...state,
       loginStudent,
+      setSession,
       logoutStudent,
       loginAdmin,
       logoutAdmin,
       refreshProfile,
     }),
-    [state, loginStudent, logoutStudent, loginAdmin, logoutAdmin, refreshProfile]
+    [state, loginStudent, setSession, logoutStudent, loginAdmin, logoutAdmin, refreshProfile]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
