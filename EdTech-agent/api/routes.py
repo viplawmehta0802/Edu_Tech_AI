@@ -81,7 +81,9 @@ def admin_login(payload: dict):
     if payload.get("password") == ADMIN_PASSWORD:
         return {"ok": True}
     raise HTTPException(status_code=401, detail="Invalid password")
- (by email)")
+
+
+@router.post("/students", summary="Create new student (by email)")
 def create_student(req: StudentCreateRequest):
     email = (req.email or "").strip().lower() or None
     sid = (req.student_id or email or "").strip()
@@ -104,9 +106,7 @@ def create_student(req: StudentCreateRequest):
         "profile": profile,
         "email_sent": email_sent,
         "email_configured": emailer.is_configured(),
-    
-    profile = memory.create_student(req.student_id, req.name, req.grade)
-    return {"message": "Student created", "profile": profile}
+    }
 
 
 @router.get("/students/{student_id}", summary="Get student profile")
