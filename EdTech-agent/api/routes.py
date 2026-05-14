@@ -1,4 +1,5 @@
 import os
+import secrets
 import shutil
 import tempfile
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form
@@ -41,6 +42,19 @@ class StudentCreateRequest(BaseModel):
     email: str | None = None
     name: str
     grade: int
+    password: str | None = None  # optional; auto-generated if omitted
+
+
+class StudentLoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+def _scrub(profile: dict | None) -> dict | None:
+    """Remove sensitive fields before returning a profile."""
+    if not profile:
+        return profile
+    return {k: v for k, v in profile.items() if k != "password_hash"}
 
 class QuizRequest(BaseModel):
     topic: str
@@ -89,24 +103,44 @@ def create_student(req: StudentCreateRequest):
     sid = (req.student_id or email or "").strip()
     if not sid:
         raise HTTPException(status_code=400, detail="Email (or student_id) is required")
+    if memory.get_student(sid):
+        raise HTTPException(status_code=409, detail="An account with that email already exists. Please sign in instead.")
     profile = memory.create_student(sid, req.name, req.grade)
     # Persist email on the profile for later reference
     if email:
         try:
             memory.set_email(sid, email)
-            profile = memory.get_student(sid) or profile
         except Exception:
             pass
+    # Generate a password if not provided
+    password = (req.password or "").strip() or secrets.token_urlsafe(8)
+    memory.set_password(sid, password)
+    profile = memory.get_student(sid) or profile
+
     email_sent = False
     if email:
-        email_sent = emailer.send_welcome_email(email, req.name, req.grade)
+        email_sent = emailer.send_welcome_email(email, req.name, req.grade, password)
     return {
         "message": "Student created",
         "student_id": sid,
-        "profile": profile,
+        "profile": _scrub(profile),
+        "password": password,  # so the UI can show it if email isn't configured
         "email_sent": email_sent,
         "email_configured": emailer.is_configured(),
     }
+
+
+@router.post("/students/login", summary="Sign in with email + password")
+def student_login(req: StudentLoginRequest):
+    sid = memory.find_id_by_email(req.email)
+    if not sid:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    profile = memory.get_student(sid)
+    if not profile or not profile.get("password_hash"):
+        raise HTTPException(status_code=401, detail="Account has no password set. Please re-register.")
+    if not memory.verify_credentials(sid, req.password):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    return {"student_id": sid, "profile": _scrub(profile)}
 
 
 @router.get("/students/{student_id}", summary="Get student profile")
@@ -114,12 +148,12 @@ def get_student(student_id: str):
     profile = memory.get_student(student_id)
     if not profile:
         raise HTTPException(status_code=404, detail="Student not found")
-    return profile
+    return _scrub(profile)
 
 
-@router.get("/students", summary="List all students")
+@router.get("/students", summary="List all students (admin)")
 def list_students():
-    return memory.get_all_students()
+    return {sid: _scrub(p) for sid, p in memory.get_all_students().items()}
 
 
 @router.post("/chat", response_model=ChatResponse, summary="Chat with the tutor")
