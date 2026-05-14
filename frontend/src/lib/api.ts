@@ -112,16 +112,28 @@ export const apiClient = {
     email?: string;
     name: string;
     grade: number;
+    password?: string;
   }): Promise<{
     message: string;
     student_id: string;
     profile: StudentProfile;
+    password?: string;
     email_sent?: boolean;
     email_configured?: boolean;
   }> {
     return http('/students', {
       method: 'POST',
       body: JSON.stringify(payload),
+    });
+  },
+
+  async loginStudent(email: string, password: string): Promise<{
+    student_id: string;
+    profile: StudentProfile;
+  }> {
+    return http('/students/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
     });
   },
 
