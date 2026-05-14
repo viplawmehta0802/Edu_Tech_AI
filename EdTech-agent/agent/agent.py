@@ -14,7 +14,14 @@ class EdTechAgent:
     def __init__(self, student_id: str):
         self.student_id = student_id
         self.memory = StudentMemory()
-        self.history: list[dict] = []
+        # Load recent persisted chat history (last 20 turns) so context survives restarts.
+        try:
+            past = self.memory.get_chat_history(student_id, limit=20)
+            self.history: list[dict] = [
+                {"role": m["role"], "content": m["content"]} for m in past
+            ]
+        except Exception:
+            self.history = []
 
     def _build_system_message(self) -> dict:
         profile = self.memory.get_student(self.student_id)
@@ -36,6 +43,10 @@ class EdTechAgent:
     def chat(self, user_message: str) -> str:
         """Send a message to the agent and get a response, using RAG if curriculum is loaded."""
         self.history.append({"role": "user", "content": user_message})
+        try:
+            self.memory.add_chat_message(self.student_id, "user", user_message)
+        except Exception:
+            pass
 
         messages = [self._build_system_message()]
 
@@ -70,6 +81,10 @@ class EdTechAgent:
 
         reply = response.choices[0].message.content
         self.history.append({"role": "assistant", "content": reply})
+        try:
+            self.memory.add_chat_message(self.student_id, "assistant", reply)
+        except Exception:
+            pass
 
         # Auto-detect if student struggled and update weak topics
         self._update_weak_topics_if_needed(user_message, reply)
@@ -106,3 +121,7 @@ class EdTechAgent:
     def reset_history(self):
         """Clear conversation history for a new session."""
         self.history = []
+        try:
+            self.memory.clear_chat_history(self.student_id)
+        except Exception:
+            pass
