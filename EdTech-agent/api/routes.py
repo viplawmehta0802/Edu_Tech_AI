@@ -268,14 +268,24 @@ def record_quiz_result(req: QuizResultRequest):
     if not memory.get_student(req.student_id):
         raise HTTPException(status_code=404, detail="Student not found")
 
-    # Update analytics
+    # Persist the raw result row
+    memory.add_quiz_result(
+        req.student_id,
+        topic=req.topic,
+        score_percentage=req.score_percentage,
+        questions_count=req.questions_count,
+        correct_count=req.correct_count,
+        time_spent_minutes=req.time_spent_minutes,
+    )
+
+    # Update aggregate analytics
     memory.update_analytics(
         student_id=req.student_id,
         quiz_score=req.score_percentage,
         questions_count=req.questions_count,
         correct_count=req.correct_count,
         time_spent=req.time_spent_minutes,
-        subject=req.topic
+        subject=req.topic,
     )
 
     # Award points based on performance
@@ -314,6 +324,20 @@ def get_analytics(student_id: str):
     return {"analytics": profile.get("analytics", {})}
 
 
+@router.get("/students/{student_id}/chat-history", summary="Get persisted chat history")
+def get_student_chat_history(student_id: str, limit: int = 50):
+    if not memory.get_student(student_id):
+        raise HTTPException(status_code=404, detail="Student not found")
+    return {"messages": memory.get_chat_history(student_id, limit=limit)}
+
+
+@router.get("/students/{student_id}/quiz-results", summary="Get a student's quiz history")
+def get_student_quiz_results(student_id: str, limit: int = 50):
+    if not memory.get_student(student_id):
+        raise HTTPException(status_code=404, detail="Student not found")
+    return {"results": memory.get_quiz_results(student_id, limit=limit)}
+
+
 # ── Curriculum / RAG endpoints ─────────────────────────────────────
 
 @router.post("/curriculum/upload", summary="Upload a PDF and index it for RAG")
@@ -321,15 +345,13 @@ async def upload_curriculum(file: UploadFile = File(...), grade: int = Form(0)):
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are accepted")
 
-    save_path = os.path.join(rag.CURRICULUM_DIR, file.filename)
     try:
-        with open(save_path, "wb") as f:
-            shutil.copyfileobj(file.file, f)
+        file_bytes = await file.read()
     finally:
-        file.file.close()
+        await file.close()
 
     try:
-        stats = rag.ingest_pdf(save_path, source_name=file.filename, grade=grade if grade > 0 else None)
+        stats = rag.ingest_pdf(file_bytes, source_name=file.filename, grade=grade if grade > 0 else None)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Indexing failed: {e}")
 
@@ -344,23 +366,24 @@ def list_curriculum():
 @router.delete("/curriculum/{source_name}", summary="Remove a PDF from the index")
 def delete_curriculum(source_name: str):
     removed = rag.delete_source(source_name)
-    file_path = os.path.join(rag.CURRICULUM_DIR, source_name)
-    if os.path.exists(file_path):
-        try:
-            os.remove(file_path)
-        except Exception:
-            pass
     return {"message": f"Removed '{source_name}'", "chunks_removed": removed}
 
 
 @router.get("/curriculum/file/{source_name}", summary="Stream a curriculum PDF for viewing")
 def get_curriculum_file(source_name: str):
-    # Prevent path traversal
     safe_name = os.path.basename(source_name)
-    file_path = os.path.join(rag.CURRICULUM_DIR, safe_name)
-    if not os.path.exists(file_path):
+    try:
+        data = rag.get_pdf_bytes(safe_name)
+    except FileNotFoundError:
         raise HTTPException(status_code=404, detail="PDF not found")
-    return FileResponse(file_path, media_type="application/pdf", filename=safe_name)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Could not load PDF: {e}")
+    from fastapi.responses import Response
+    return Response(
+        content=data,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="{safe_name}"'},
+    )
 
 
 # ── Short notes from highlighted text ──────────────────────────────
