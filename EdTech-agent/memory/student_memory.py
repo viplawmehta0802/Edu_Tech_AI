@@ -1,6 +1,32 @@
+import hashlib
 import json
 import os
+import secrets
 from config import DATA_FILE
+
+
+def hash_password(password: str) -> str:
+    """Hash a password using PBKDF2-SHA256 with a random salt."""
+    salt = secrets.token_bytes(16)
+    iters = 200_000
+    dk = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, iters)
+    return f"pbkdf2_sha256${iters}${salt.hex()}${dk.hex()}"
+
+
+def verify_password(stored: str, password: str) -> bool:
+    """Constant-time verify a password against a stored hash."""
+    if not stored or not password:
+        return False
+    try:
+        algo, iters_s, salt_hex, hash_hex = stored.split('$')
+        if algo != 'pbkdf2_sha256':
+            return False
+        salt = bytes.fromhex(salt_hex)
+        expected = bytes.fromhex(hash_hex)
+        actual = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, int(iters_s))
+        return secrets.compare_digest(expected, actual)
+    except Exception:
+        return False
 
 
 class StudentMemory:
@@ -101,6 +127,33 @@ class StudentMemory:
             return
         data[student_id]["email"] = email
         self._save(data)
+
+    def set_password(self, student_id: str, password: str):
+        """Hash and store a password for a student."""
+        data = self._load()
+        if student_id not in data:
+            return
+        data[student_id]["password_hash"] = hash_password(password)
+        self._save(data)
+
+    def verify_credentials(self, student_id: str, password: str) -> bool:
+        """Return True if the given password matches the stored hash."""
+        profile = self.get_student(student_id)
+        if not profile:
+            return False
+        return verify_password(profile.get("password_hash", ""), password)
+
+    def find_id_by_email(self, email: str) -> str | None:
+        """Look up a student id by email (case-insensitive)."""
+        if not email:
+            return None
+        e = email.strip().lower()
+        for sid, p in self._load().items():
+            if sid.lower() == e:
+                return sid
+            if (p.get("email") or "").lower() == e:
+                return sid
+        return None
 
     def add_study_plan(self, student_id: str, plan: dict):
         """Add a study plan for the student."""
