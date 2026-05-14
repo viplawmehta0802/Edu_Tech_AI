@@ -31,7 +31,7 @@ def _is_valid_email(email: str) -> bool:
     return bool(local) and "." in domain
 
 
-def send_welcome_email(to_email: str, name: str, grade: int) -> bool:
+def send_welcome_email(to_email: str, name: str, grade: int, password: str | None = None) -> bool:
     """Send a welcome email. Returns True if sent, False if skipped or failed."""
     if not is_configured():
         log.info("SMTP not configured — skipping welcome email for %s", to_email)
@@ -41,18 +41,31 @@ def send_welcome_email(to_email: str, name: str, grade: int) -> bool:
         return False
 
     subject = f"Welcome to {APP_NAME}! 🎓"
+    creds_text = (
+        f"  • Email (login ID): {to_email}\n"
+        f"  • Password: {password}\n\n"
+        "Please keep this password safe. You can use it to sign in any time.\n\n"
+        if password else ""
+    )
     text_body = (
         f"Hi {name or 'there'},\n\n"
         f"Welcome to {APP_NAME} — your personal AI learning assistant.\n\n"
         f"Your account is ready:\n"
-        f"  • Email: {to_email}\n"
+        f"{creds_text}"
         f"  • Grade: {grade}\n\n"
-        "You can now sign in with your email and start exploring:\n"
+        "You can now sign in and start exploring:\n"
         "  • Ask the Tutor anything\n"
         "  • Generate adaptive quizzes\n"
         "  • Upload PDFs and turn highlights into short notes\n\n"
         "Happy learning!\n"
         f"— The {APP_NAME} team\n"
+    )
+    creds_html = (
+        f'<tr><td><strong>Login ID</strong></td><td style="padding-left:12px">{to_email}</td></tr>'
+        f'<tr><td><strong>Password</strong></td>'
+        f'<td style="padding-left:12px;font-family:ui-monospace,Menlo,monospace;'
+        f'background:#f1f5f9;padding:4px 8px;border-radius:6px">{password}</td></tr>'
+        if password else ""
     )
     html_body = f"""\
 <html>
@@ -60,11 +73,12 @@ def send_welcome_email(to_email: str, name: str, grade: int) -> bool:
     <div style="max-width:520px;margin:0 auto;background:#fff;border-radius:16px;padding:28px;border:1px solid #e2e8f0">
       <h1 style="margin:0 0 12px;font-size:22px">Welcome to {APP_NAME}! 🎓</h1>
       <p>Hi {name or 'there'},</p>
-      <p>Your account is ready. You can now sign in with your email and start learning.</p>
+      <p>Your account is ready. Use the credentials below to sign in.</p>
       <table style="font-size:14px;color:#475569;margin:12px 0">
-        <tr><td><strong>Email</strong></td><td style="padding-left:12px">{to_email}</td></tr>
+        {creds_html}
         <tr><td><strong>Grade</strong></td><td style="padding-left:12px">{grade}</td></tr>
       </table>
+      <p style="font-size:12px;color:#94a3b8">Keep this password safe. Don’t share it with anyone.</p>
       <ul style="color:#475569;font-size:14px">
         <li>Ask the Tutor anything</li>
         <li>Generate adaptive quizzes</li>
