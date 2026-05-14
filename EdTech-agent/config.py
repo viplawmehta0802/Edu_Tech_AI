@@ -9,7 +9,12 @@ MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4o")
 APP_PORT = int(os.getenv("APP_PORT", 8000))
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "")
 DISABLE_SSL_VERIFY = os.getenv("DISABLE_SSL_VERIFY", "0") == "1"
-DATA_FILE = os.path.join(os.path.dirname(__file__), "data", "students.json")
+
+# ── Supabase (Postgres + Storage) ────────────────────────────────
+DATABASE_URL = os.getenv("DATABASE_URL", "")
+SUPABASE_URL = os.getenv("SUPABASE_URL", "")
+SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+SUPABASE_BUCKET = os.getenv("SUPABASE_BUCKET", "curriculum-pdfs")
 
 # ── SMTP (welcome email) ─────────────────────────────────────────
 SMTP_HOST = os.getenv("SMTP_HOST", "")
